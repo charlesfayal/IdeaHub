@@ -7,14 +7,28 @@
 //
 
 import UIKit
+import Firebase
+import SwiftKeychainWrapper
 
 class ProfileVC: UIViewController {
 
+    
+    @IBAction func signOutBtnTapped(_ sender: UIButton) {
+        
+        try! FIRAuth.auth()!.signOut()
+        KeychainWrapper.standard.removeObject(forKey: KEY_UID)
+        presentSignUpOrLoginVC(sender:self)
+        
+    }
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
         // Do any additional setup after loading the view.
     }
+    
+    
 
 
 }

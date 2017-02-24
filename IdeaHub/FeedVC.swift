@@ -13,34 +13,14 @@ import SwiftKeychainWrapper
 //Global Variables
 var currentUser:User!
 
-class FeedVC: UIViewController {
-    
-    @IBOutlet weak var postImage: UIImageView!
-    @IBOutlet weak var postTitle: UILabel!
-    @IBOutlet weak var posterImage: RoundPic!
-    @IBOutlet weak var posterName: UILabel!
-    @IBOutlet weak var postStage: UILabel!
-    @IBOutlet weak var postLikes: UILabel!
-    @IBOutlet weak var postCaption: UILabel!
-    @IBOutlet weak var postLogo: RoundPic!
-    
-    @IBOutlet weak var swipeCardView: swipeCardShadowRoundCorner!
-    var originalCenter:CGPoint! //used for swiping to return to the original position
-
+class FeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource{
 
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-   
-        if DataManager.dm.currentPost == nil {
-            swipeCardView.isHidden = true 
-        }
-        //Swipe gesture stuff
-        originalCenter = swipeCardView.frame.origin
-        let swipeGesture = UIPanGestureRecognizer(target: self, action: #selector(FeedVC.wasDragged(_:)))
-        swipeCardView.addGestureRecognizer(swipeGesture)
-        
+
+
         //Get users info 
         DataService.ds.REF_USER_CURRENT.observeSingleEvent(of: .value, with: { (snapshot) in
             if let snapshots = snapshot.children.allObjects as? [FIRDataSnapshot] {
@@ -56,111 +36,23 @@ class FeedVC: UIViewController {
             }
         })
         
-        self.updateData()
+        
+        
+    }
+    
+    //MARK: TableView Functions
+    @IBOutlet weak var tableView: UITableView!
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return 1
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "IdeaTableViewCell") as! IdeaTableViewCell
+        return cell
     }
     
     
-    func updateData(){
-        print("CHUCK: Updating data for feedVC")
-        //Downloads posts data then runs function when done
-        DataManager.dm.getPosts(){
-            //function to run when done
-            self.nextPost()
-        }
-    }
-    
-    func nextPost() -> Void{
-        print("next post")
-    
-        if let post = DataManager.dm.nextPost(){
-            showPost(post: post)
-        } else {
-            print("No posts to show")
-            swipeCardView.isHidden = true
-        }
-    }
+    //MARK:
 
-    func showPost(post:Post){
-        self.swipeCardView.isHidden = false
-        configurePost(post: post)
-        
-    }
-    func postWasSwiped( wasLiked: Bool){
-        DataManager.dm.adjustLikesForCurrentPost(addLike: wasLiked)
-        nextPost()
-    }
-    
-    func configurePost(post: Post, img: UIImage? = nil) {
-
-      
-        self.postCaption.text = post.shortDescript
-        self.postTitle.text = post.name
-        //self.postStage.text = post.prodStage
-    
-        if let creatorName = post.creatorName {
-            self.posterName.text = creatorName
-        }
-        
-        DataManager.dm.getImage(imgUrl:post.productUrl){
-            (img) in
-            self.postImage.image = img
-        }
-        DataManager.dm.getImage(imgUrl: post.logoUrl){
-            (img) in
-            self.postLogo.image = img
-        }
-     
-    }
-    
- 
-
-    @IBAction func signOutBtnTapped(_ sender: Any) {
-       
-        try! FIRAuth.auth()!.signOut()
-        KeychainWrapper.standard.removeObject(forKey: KEY_UID)
-        presentSignUpOrLoginVC(sender:self)
-        
-    }
-    
-    
-    
-    
-    //MARK: - Gestures
-    
-    
-    @IBAction func tappedPost(_ sender: Any) {
-        print("Post Tapped")
-        performSegue(withIdentifier: "toPostDetailSegue", sender: self)
-    }
-    
-    func wasDragged(_ gesture: UIPanGestureRecognizer)
-    {
-        let translation = gesture.translation(in: self.view)
-        let view = gesture.view!
-        //print("\(view.subviews.first?.frame)")
-        
-        view.frame.origin = CGPoint(x: originalCenter.x + translation.x, y: self.originalCenter.y + translation.y) // relative to bottom left of screen
-        let xFromCenter = view.center.x - self.view.bounds.width/2
-        let scale = 1000 / (abs(xFromCenter) + 1000 )
-        var rotation = CGAffineTransform(rotationAngle: 0)
-        var stretch = rotation.scaledBy(x: scale, y: scale)
-        view.transform = stretch
-        //Below decides if it is a left or right drag
-        if gesture.state == UIGestureRecognizerState.ended {
-            if view.center.x < 100 {
-                print("left drag")
-                self.postWasSwiped( wasLiked: false)
-            } else if view.center.x > self.view.bounds.width - 100 {
-                print("right drag")
-                self.postWasSwiped( wasLiked: true)
-            }
-            //Returns the view back to normal
-            rotation = CGAffineTransform(rotationAngle: 0)
-            stretch = rotation.scaledBy(x: 1, y: 1)
-            view.transform = stretch
-            view.frame.origin  = originalCenter
-        }
-    }
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let dest = segue.destination
         switch(dest ){
